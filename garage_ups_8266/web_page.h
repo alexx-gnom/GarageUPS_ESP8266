@@ -37,7 +37,7 @@ button.small { padding: 7px 10px; font-size: 13px; }
 </head>
 <body>
 <main>
-    <h1>🔋 Garage UPS</h1>
+    <h1>🔋 Gn.O.M Garage UPS</h1>
     <div class="subtitle">ESP8266 · локальний моніторинг</div>
 
     <div id="protectionCard" class="card alarm" style="margin-bottom:12px">
@@ -57,11 +57,11 @@ button.small { padding: 7px 10px; font-size: 13px; }
     <div class="card" style="margin-top:12px">
         <h2>Канали навантаження</h2>
         <div class="output">
-            <div class="outputInfo"><strong>Канал 1 · Камери</strong><span id="load0Actual" class="actual">Фактично: —</span></div>
+            <div class="outputInfo"><strong>Канал 1 ·</strong><span id="load0Actual" class="actual">Фактично: —</span></div>
             <div class="actions"><button id="load0" onclick="toggleLoad(0)">OFF</button><button class="small" id="load0Restart" onclick="restartLoad(0)">Перезапуск · 7 с</button></div>
         </div>
         <div class="output">
-            <div class="outputInfo"><strong>Канал 2 · Роутер</strong><span id="load1Actual" class="actual">Фактично: —</span></div>
+            <div class="outputInfo"><strong>Канал 2 ·</strong><span id="load1Actual" class="actual">Фактично: —</span></div>
             <div class="actions"><button id="load1" onclick="toggleLoad(1)">OFF</button><button class="small" id="load1Restart" onclick="restartLoad(1)">Перезапуск · 7 с</button></div>
         </div>
     </div>
@@ -93,13 +93,17 @@ function showNumber(id, value, decimals, clampNegative = false) {
 }
 function actualLoadText(data, n) {
     const actual = data["load" + n];
+    const desired = data["load" + n + "Desired"];
+
+    if (actual) return "Фактично: ON · вихід увімкнено";
+    if (!desired) return "Фактично: OFF · вимкнено вручну";
     if (data.overheat) return "Фактично: OFF · аварія температури";
     if (!data.temperatureOk) return "Фактично: OFF · перевір датчики температури";
+    if (data["load" + n + "Restarting"]) return "Фактично: OFF · перезапуск, 7 с";
     if (data.lowBattery && !data.chargerPresent) return "Фактично: OFF · акумулятор нижче 11,2 В";
     if (!data.chargerPresent && !data.batteryOk) return "Фактично: OFF · немає достовірної напруги АКБ";
-    if (data["load" + n + "Restarting"]) return "Фактично: OFF · перезапуск, 7 с";
-    if (!data["load" + n + "Desired"]) return "Фактично: OFF · вимкнено вручну";
-    return "Фактично: " + (actual ? "ON" : "OFF");
+    if (!data.loadsAllowed) return "Фактично: OFF · захист блокує канал";
+    return "Фактично: OFF · перевір вихід і підключення реле";
 }
 async function updateStatus() {
     try {
@@ -115,8 +119,10 @@ async function updateStatus() {
 
         setButton("load0", data.load0Desired);
         setButton("load1", data.load1Desired);
-        document.getElementById("load0Actual").textContent = actualLoadText(data, 0);
-        document.getElementById("load1Actual").textContent = actualLoadText(data, 1);
+        document.getElementById("load0Actual").textContent =
+            "Запит: " + (data.load0Desired ? "ON" : "OFF") + " · " + actualLoadText(data, 0);
+        document.getElementById("load1Actual").textContent =
+            "Запит: " + (data.load1Desired ? "ON" : "OFF") + " · " + actualLoadText(data, 1);
         document.getElementById("load0Restart").disabled = data.load0Restarting;
         document.getElementById("load1Restart").disabled = data.load1Restarting;
         document.getElementById("load0Restart").textContent = data.load0Restarting ? "Очікування…" : "Перезапуск · 7 с";
