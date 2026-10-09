@@ -59,8 +59,8 @@ constexpr float ACS_SENSITIVITY_PIN = 0.01497f; // V/A
 
 // --------------------- ADS1115 ------------------------
 
-constexpr uint8_t ADC_AVERAGE_SAMPLES = 16;
-constexpr uint8_t ADC_SAMPLE_DELAY_MS = 2;
+constexpr uint8_t ADC_AVERAGE_SAMPLES = 4;
+constexpr uint8_t ADC_SAMPLE_DELAY_MS = 0;
 
 // --------------------- Timing -------------------------
 

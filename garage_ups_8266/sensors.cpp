@@ -39,6 +39,11 @@ static float currentAmps = 0.0f;
 
 static float dsTemperature = DEVICE_DISCONNECTED_C;
 
+static bool dsConversionPending = false;
+static unsigned long dsConversionStartedAt = 0;
+
+static constexpr unsigned long DS_CONVERSION_TIME_MS = 750;
+
 // =====================================================
 // Read ADC channel with averaging
 // =====================================================
@@ -120,6 +125,11 @@ bool sensorsBegin()
     ads.setGain(GAIN_ONE);
 
     ds18.begin();
+    ds18.setWaitForConversion(false);
+
+    ds18.requestTemperatures();
+    dsConversionStartedAt = millis();
+    dsConversionPending = true;
 
     return true;
 }
@@ -167,9 +177,20 @@ void sensorsUpdate()
     if (fabs(currentAmps) < 0.15f)
         currentAmps = 0.0f;
 
-    // DS18B20
-    ds18.requestTemperatures();
-    dsTemperature = ds18.getTempCByIndex(0);
+    // DS18B20: asynchronous conversion
+    if (dsConversionPending &&
+        millis() - dsConversionStartedAt >= DS_CONVERSION_TIME_MS) {
+
+        const float temperature = ds18.getTempCByIndex(0);
+
+        if (temperature != DEVICE_DISCONNECTED_C) {
+            dsTemperature = temperature;
+        }
+
+        ds18.requestTemperatures();
+        dsConversionStartedAt = millis();
+        dsConversionPending = true;
+    }
 }
 
 // =====================================================
