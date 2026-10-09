@@ -4,6 +4,7 @@
 #include "debug.h"
 #include "web.h"
 #include "protection.h"
+#include "mqtt.h"
 
 void setup() {
     debugBegin();
@@ -29,10 +30,14 @@ void setup() {
     if (!webBegin()) {
         Serial.println(F("ERROR: Web server initialization failed."));
     }
+
+    // MQTT initializes after secrets and Wi-Fi setup; connection attempts are non-blocking in loop().
+    mqttBegin();
 }
 
 void loop() {
     webHandleClient();
+    mqttUpdate();
 
     static unsigned long lastSensorUpdate = 0;
     const unsigned long now = millis();
