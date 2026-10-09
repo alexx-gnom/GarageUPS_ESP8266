@@ -1,6 +1,6 @@
 
 # Private Wi-Fi credentials
-secrets.h
+*/secrets.h
 
 # Arduino IDE / build artifacts
 build/
