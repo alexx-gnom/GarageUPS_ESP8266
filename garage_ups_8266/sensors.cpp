@@ -18,6 +18,9 @@ static OneWire oneWire(PIN_DS18B20);
 static DallasTemperature ds18(&oneWire);
 
 static bool adsReady = false;
+static bool dsConversionPending = false;
+static unsigned long dsConversionStartedAt = 0;
+static constexpr unsigned long DS_CONVERSION_TIME_MS = 750;
 
 // =====================================================
 // Cached measurements
@@ -38,11 +41,6 @@ static float currentOutputV = 0.0f;
 static float currentAmps = 0.0f;
 
 static float dsTemperature = DEVICE_DISCONNECTED_C;
-
-static bool dsConversionPending = false;
-static unsigned long dsConversionStartedAt = 0;
-
-static constexpr unsigned long DS_CONVERSION_TIME_MS = 750;
 
 // =====================================================
 // Read ADC channel with averaging
@@ -126,7 +124,6 @@ bool sensorsBegin()
 
     ds18.begin();
     ds18.setWaitForConversion(false);
-
     ds18.requestTemperatures();
     dsConversionStartedAt = millis();
     dsConversionPending = true;
@@ -177,16 +174,12 @@ void sensorsUpdate()
     if (fabs(currentAmps) < 0.15f)
         currentAmps = 0.0f;
 
-    // DS18B20: asynchronous conversion
-    if (dsConversionPending &&
-        millis() - dsConversionStartedAt >= DS_CONVERSION_TIME_MS) {
-
+    // DS18B20: asynchronous conversion so the web server is not blocked.
+    if (dsConversionPending && millis() - dsConversionStartedAt >= DS_CONVERSION_TIME_MS) {
         const float temperature = ds18.getTempCByIndex(0);
-
         if (temperature != DEVICE_DISCONNECTED_C) {
             dsTemperature = temperature;
         }
-
         ds18.requestTemperatures();
         dsConversionStartedAt = millis();
         dsConversionPending = true;

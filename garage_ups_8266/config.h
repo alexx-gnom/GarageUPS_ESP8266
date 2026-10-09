@@ -65,3 +65,12 @@ constexpr uint8_t ADC_SAMPLE_DELAY_MS = 0;
 // --------------------- Timing -------------------------
 
 constexpr unsigned long SENSOR_UPDATE_INTERVAL_MS = 1000;
+
+// --------------------- Protection -------------------------
+
+constexpr float BAT_OVERHEAT_TEMPERATURE = 40.0f;
+
+constexpr float _BAT_LOW_VOLTAGE = 11.2f;
+
+// Charger-source presence threshold, based on the currently observed ~12.84 V.
+constexpr float CHARGER_PRESENT_VOLTAGE = 12.0f;
