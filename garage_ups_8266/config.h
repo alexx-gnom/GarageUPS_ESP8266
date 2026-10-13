@@ -18,14 +18,14 @@ constexpr uint8_t PIN_DS18B20 = 13; // GPIO13
 // --------------------- Outputs -----------------------
 
 constexpr uint8_t PIN_RELAY_SAFETY = 12; // GPIO12
-constexpr uint8_t PIN_RELAY_LOAD0  = 14; // GPIO14
-constexpr uint8_t PIN_RELAY_LOAD1  = 16; // GPIO16
+constexpr uint8_t PIN_RELAY_LOAD1  = 14; // GPIO14
+constexpr uint8_t PIN_RELAY_LOAD0  = 16; // GPIO16
 
 // --------------------- ADS1115 -----------------------
 
 constexpr uint8_t ADC_NTC     = 0; // A0
-constexpr uint8_t ADC_CHARGER = 1; // A1
-constexpr uint8_t ADC_BATTERY = 2; // A2
+constexpr uint8_t ADC_BATTERY = 1; // A1
+constexpr uint8_t ADC_CHARGER = 2; // A2
 constexpr uint8_t ADC_CURRENT = 3; // A3
 
 // --------------------- NTC ---------------------------

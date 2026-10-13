@@ -8,9 +8,9 @@ static bool load1State  = false;
 
 bool outputsBegin()
 {
-    digitalWrite(PIN_RELAY_SAFETY, LOW);
-    digitalWrite(PIN_RELAY_LOAD0, LOW);
-    digitalWrite(PIN_RELAY_LOAD1, LOW);
+    digitalWrite(PIN_RELAY_SAFETY, HIGH);
+    digitalWrite(PIN_RELAY_LOAD0, HIGH);
+    digitalWrite(PIN_RELAY_LOAD1, HIGH);
 
     pinMode(PIN_RELAY_SAFETY, OUTPUT);
     pinMode(PIN_RELAY_LOAD0, OUTPUT);
@@ -26,19 +26,19 @@ bool outputsBegin()
 void outputsSetSafety(bool enabled)
 {
     safetyState = enabled;
-    digitalWrite(PIN_RELAY_SAFETY, enabled ? HIGH : LOW);
+    digitalWrite(PIN_RELAY_SAFETY, enabled ? LOW : HIGH);
 }
 
 void outputsSetLoad0(bool enabled)
 {
     load0State = enabled;
-    digitalWrite(PIN_RELAY_LOAD0, enabled ? HIGH : LOW);
+    digitalWrite(PIN_RELAY_LOAD0, enabled ? LOW : HIGH);
 }
 
 void outputsSetLoad1(bool enabled)
 {
     load1State = enabled;
-    digitalWrite(PIN_RELAY_LOAD1, enabled ? HIGH : LOW);
+    digitalWrite(PIN_RELAY_LOAD1, enabled ? LOW : HIGH);
 }
 
 bool outputsGetSafety()

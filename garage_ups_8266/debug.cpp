@@ -27,6 +27,15 @@ void debugPrintSensors() {
     Serial.print(sensorsChargerVoltage(), 2);
     Serial.println(F(" V"));
 
+    Serial.print(F("ACS712 pin Voltage"));
+    Serial.print(sensorsCurrentPinVoltage(), 2);
+    Serial.println(F(" V"));
+
+    Serial.print(F("ACS712 out Voltage"));
+    Serial.print(sensorsCurrentOutputVoltage(), 2);
+    Serial.println(F(" V"));
+
+
     Serial.print(F("Current: "));
     Serial.print(sensorsCurrentAmps(), 2);
     Serial.println(F(" A"));
