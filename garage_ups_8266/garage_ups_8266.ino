@@ -5,6 +5,7 @@
 #include "web.h"
 #include "protection.h"
 #include "mqtt.h"
+#include "blynk_remote.h"
 
 void setup() {
     debugBegin();
@@ -33,11 +34,14 @@ void setup() {
 
     // MQTT initializes after secrets and Wi-Fi setup; connection attempts are non-blocking in loop().
     mqttBegin();
+
+    blynkRemoteBegin();
 }
 
 void loop() {
     webHandleClient();
     mqttUpdate();
+    blynkRemoteUpdate();
 
     static unsigned long lastSensorUpdate = 0;
     const unsigned long now = millis();

@@ -171,7 +171,7 @@ void mqttUpdate() {
     bool ok = true;
     const float battery = fabs(sensorsBatteryVoltage());
     const float source = fabs(sensorsChargerVoltage());
-    const float current = fabs(sensorsCurrentAmps());
+    const float current = sensorsCurrentAmps();
     const float batteryTemp = sensorsNtcTemperature();
     const float externalTemp = sensorsDs18b20Temperature();
 
