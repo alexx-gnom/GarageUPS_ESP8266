@@ -9,6 +9,7 @@
 #include "outputs.h"
 #include "protection.h"
 #include "web_page.h"
+#include "system_clock.h"
 
 static ESP8266WebServer server(80);
 static bool serverStarted = false;
@@ -24,9 +25,15 @@ static void handleRoot() {
 
 static void handleStatus() {
     String json;
-    json.reserve(320);
+    json.reserve(440);
     json = "{";
-    json += "\"charger\":" + jsonFloat(sensorsChargerVoltage(), 2);
+    json += "\"clockValid\":" + String(systemClockIsValid() ? "true" : "false");
+    String clockText = systemClockGetLocalTime();
+    clockText.replace("\\", "\\\\");
+    clockText.replace("\"", "\\\"");
+    json += ",\"clock\":\"" + clockText + "\"";
+    json += ",\"uptimeMs\":" + String(millis());
+    json += ",\"charger\":" + jsonFloat(sensorsChargerVoltage(), 2);
     json += ",\"battery\":" + jsonFloat(sensorsBatteryVoltage(), 2);
     json += ",\"current\":" + jsonFloat(sensorsCurrentAmps(), 2);
     json += ",\"ntc\":" + jsonFloat(sensorsNtcTemperature(), 1);

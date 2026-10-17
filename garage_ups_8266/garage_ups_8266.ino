@@ -6,6 +6,7 @@
 #include "protection.h"
 #include "mqtt.h"
 #include "blynk_remote.h"
+#include "system_clock.h"
 
 void setup() {
     debugBegin();
@@ -32,15 +33,19 @@ void setup() {
         Serial.println(F("ERROR: Web server initialization failed."));
     }
 
+    // System clock uses NTP when Wi-Fi is available; it never blocks the protection loop.
+    systemClockBegin();
+
     // MQTT initializes after secrets and Wi-Fi setup; connection attempts are non-blocking in loop().
-    mqttBegin();
+    //mqttBegin();
 
     blynkRemoteBegin();
 }
 
 void loop() {
+    systemClockUpdate();
     webHandleClient();
-    mqttUpdate();
+    //mqttUpdate();
     blynkRemoteUpdate();
 
     static unsigned long lastSensorUpdate = 0;

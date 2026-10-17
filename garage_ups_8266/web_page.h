@@ -40,6 +40,15 @@ button.small { padding: 7px 10px; font-size: 13px; }
     <h1>🔋 Gn.O.M Garage UPS</h1>
     <div class="subtitle">ESP8266 · локальний моніторинг</div>
 
+    <div class="card" style="margin-bottom:12px">
+        <div class="output" style="margin-top:0">
+            <div class="outputInfo"><strong>Годинник ESP · Київ</strong><span id="clockDate" class="actual">Очікування NTP…</span></div>
+            <div class="value" id="clockTime" style="margin-top:0">--:--:--</div>
+        </div>
+        <div class="actual" style="margin-top:8px">NTP: <span id="ntpStatus">перевірка…</span> · Uptime: <span id="uptime">—</span></div>
+        <div class="actual">Остання відповідь ESP: <span id="lastResponse">—</span></div>
+    </div>
+
     <div id="protectionCard" class="card alarm" style="margin-bottom:12px">
         <h2>Температурний захист</h2>
         <div id="faultTitle">Перевірка датчиків…</div>
@@ -105,11 +114,34 @@ function actualLoadText(data, n) {
     if (!data.loadsAllowed) return "Фактично: OFF · захист блокує канал";
     return "Фактично: OFF · перевір вихід і підключення реле";
 }
+let lastSuccessfulResponse = 0;
+function formatUptime(ms) {
+    const totalSeconds = Math.floor(Number(ms) / 1000);
+    const days = Math.floor(totalSeconds / 86400);
+    const hours = Math.floor((totalSeconds % 86400) / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    return (days ? days + " д " : "") + String(hours).padStart(2, "0") + ":" + String(minutes).padStart(2, "0") + ":" + String(seconds).padStart(2, "0");
+}
+function updateLastResponseLabel() {
+    const el = document.getElementById("lastResponse");
+    if (!lastSuccessfulResponse) return;
+    const age = Math.floor((Date.now() - lastSuccessfulResponse) / 1000);
+    el.textContent = age < 2 ? "щойно" : age + " с тому";
+    if (age > 5) el.style.color = "#ff7676"; else el.style.color = "#aab7c5";
+}
 async function updateStatus() {
     try {
         const response = await fetch("/api/status", { cache: "no-store" });
         if (!response.ok) throw new Error("HTTP error");
         const data = await response.json();
+        lastSuccessfulResponse = Date.now();
+        document.getElementById("clockTime").textContent = data.clockValid ? data.clock.substring(11, 19) : "--:--:--";
+        document.getElementById("clockDate").textContent = data.clockValid ? data.clock.substring(0, 10) + " · Europe/Kyiv" : "Час ще не синхронізовано";
+        document.getElementById("ntpStatus").textContent = data.clockValid ? "OK" : "очікування синхронізації";
+        document.getElementById("ntpStatus").style.color = data.clockValid ? "#55d98b" : "#ffcc66";
+        document.getElementById("uptime").textContent = formatUptime(data.uptimeMs);
+        updateLastResponseLabel();
 
         showNumber("charger", data.charger, 2, true);
         showNumber("battery", data.battery, 2, true);
@@ -174,6 +206,7 @@ function toggleLoad(n) { return postCommand("/api/load" + n + "/toggle", "load" 
 function restartLoad(n) { return postCommand("/api/load" + n + "/restart", "load" + n + "Restart"); }
 function toggleCharger() { return postCommand("/api/charger/toggle", "chargeButton"); }
 setInterval(updateStatus, 1000);
+setInterval(updateLastResponseLabel, 1000);
 updateStatus();
 </script>
 </body>
