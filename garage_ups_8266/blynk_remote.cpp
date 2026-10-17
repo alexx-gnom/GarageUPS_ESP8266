@@ -17,7 +17,8 @@ BLYNK_WRITE(V10) {
             ? F("Blynk: restart Load 0 requested.")
             : F("Blynk: restart Load 0 rejected."));
     }
-    Blynk.virtualWrite(V10, 0);
+    Blynk.virtualWrite(V10, 0); // Reset push button in the app
+    blinkSendData();
 }
 
 BLYNK_WRITE(V11) {
@@ -27,16 +28,25 @@ BLYNK_WRITE(V11) {
             ? F("Blynk: restart Load 1 requested.")
             : F("Blynk: restart Load 1 rejected."));
     }
-    Blynk.virtualWrite(V11, 0);
+    Blynk.virtualWrite(V11, 0); // Reset push button in the app
+    blinkSendData();
 }
 
 BLYNK_WRITE(V12) {
     protectionSetChargerRequest(param.asInt() != 0);
     Serial.println(F("Blynk: charge request updated."));
+    blinkSendData();
+}
+
+BLYNK_WRITE(V14) {
+     if (param.asInt() == 1) {
+        Serial.println(F("Blynk: manual data refresh requested."));
+        blinkSendData();
+    }
 }
 
 static constexpr unsigned long BLYNK_RECONNECT_INTERVAL_MS = 10000UL;
-static constexpr unsigned long BLYNK_PUBLISH_INTERVAL_MS = 15000UL;
+static constexpr unsigned long BLYNK_PUBLISH_INTERVAL_MS = 600000UL;
 
 static unsigned long lastReconnectAttempt = 0;
 static unsigned long lastPublish = 0;
@@ -87,15 +97,27 @@ void blynkRemoteUpdate() {
 
             if (Blynk.connect(100)) {
                 Serial.println(F("Blynk: connected."));
+                // Publish a fresh snapshot after reconnecting.
+                blinkSendData();
             }
         }
         return;
     }
 
+    // Keep the Blynk connection serviced on every main-loop iteration.
     Blynk.run();
 
-    if (now - lastPublish < BLYNK_PUBLISH_INTERVAL_MS) return;
-    lastPublish = now;
+    if (millis() - lastPublish >= BLYNK_PUBLISH_INTERVAL_MS) {
+        blinkSendData();
+    }
+}
+
+void blinkSendData()
+{
+    if (WiFi.status() != WL_CONNECTED || !Blynk.connected()) return;
+
+    // This function only publishes data; Blynk.run() is serviced separately.
+    lastPublish = millis();
 
     const float battery = fabs(sensorsBatteryVoltage());
     const float source = fabs(sensorsChargerVoltage());
