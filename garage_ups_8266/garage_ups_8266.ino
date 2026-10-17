@@ -37,7 +37,7 @@ void setup() {
     systemClockBegin();
 
     // MQTT initializes after secrets and Wi-Fi setup; connection attempts are non-blocking in loop().
-    //mqttBegin();
+    mqttBegin();
 
     blynkRemoteBegin();
 }
@@ -45,8 +45,9 @@ void setup() {
 void loop() {
     systemClockUpdate();
     webHandleClient();
-    //mqttUpdate();
     blynkRemoteUpdate();
+
+
 
     static unsigned long lastSensorUpdate = 0;
     const unsigned long now = millis();
@@ -65,4 +66,6 @@ void loop() {
         debugPrintSensors();
         debugPrintOutputs();
     }
+
+    mqttUpdate();
 }

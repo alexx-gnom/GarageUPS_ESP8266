@@ -58,11 +58,28 @@ static bool makeTopic(char* destination, size_t capacity, const char* feedName) 
     return written > 0 && static_cast<size_t>(written) < capacity;
 }
 
+// Measure each synchronous MQTT publish call. This is diagnostic only; it does
+// not change retry behaviour or the UPS protection logic.
+template <typename T>
+static bool timedPublish(const char* feedName, Adafruit_MQTT_Publish* feed, T value) {
+    const unsigned long started = millis();
+    const bool ok = feed->publish(value);
+    const unsigned long elapsed = millis() - started;
+
+    Serial.printf("MQTT: publish %s: %lu ms, %s\n",
+                  feedName, elapsed, ok ? "OK" : "FAILED");
+    return ok;
+}
+
 static bool connectMqtt() {
     if (WiFi.status() != WL_CONNECTED || mqtt == nullptr) return false;
 
     Serial.println(F("MQTT: connecting to Adafruit IO..."));
+    const unsigned long started = millis();
     const int8_t result = mqtt->connect();
+    const unsigned long elapsed = millis() - started;
+    Serial.printf("MQTT: connect() took %lu ms\n", elapsed);
+
     if (result == 0) {
         mqttReady = true;
         Serial.println(F("MQTT: connected."));
@@ -175,17 +192,22 @@ void mqttUpdate() {
     const float batteryTemp = sensorsNtcTemperature();
     const float externalTemp = sensorsDs18b20Temperature();
 
-    if (validValue(battery)) ok &= feedBatteryVoltage->publish(battery);
-    if (validValue(source)) ok &= feedSourceVoltage->publish(source);
-    if (validValue(current)) ok &= feedChargeCurrent->publish(current < 0.0f ? 0.0f : current);
-    if (validValue(batteryTemp)) ok &= feedBatteryTemperature->publish(batteryTemp);
-    if (validValue(externalTemp) && externalTemp > -100.0f) ok &= feedExternalTemperature->publish(externalTemp);
+    const unsigned long publishBatchStarted = millis();
 
-    ok &= feedSourcePresent->publish(protectionIsChargerPresent() ? 1 : 0);
-    ok &= feedChargeRelay->publish(outputsGetSafety() ? 1 : 0);
-    ok &= feedLoad0->publish(outputsGetLoad0() ? 1 : 0);
-    ok &= feedLoad1->publish(outputsGetLoad1() ? 1 : 0);
-    ok &= feedProtection->publish(protectionCode());
+    if (validValue(battery)) ok &= timedPublish("battery-voltage", feedBatteryVoltage, battery);
+    if (validValue(source)) ok &= timedPublish("source-voltage", feedSourceVoltage, source);
+    if (validValue(current)) ok &= timedPublish("charge-current", feedChargeCurrent, current < 0.0f ? 0.0f : current);
+    if (validValue(batteryTemp)) ok &= timedPublish("battery-temperature", feedBatteryTemperature, batteryTemp);
+    if (validValue(externalTemp) && externalTemp > -100.0f) {
+        ok &= timedPublish("external-temperature", feedExternalTemperature, externalTemp);
+    }
 
+    ok &= timedPublish("source-present", feedSourcePresent, protectionIsChargerPresent() ? 1 : 0);
+    ok &= timedPublish("charge-relay", feedChargeRelay, outputsGetSafety() ? 1 : 0);
+    ok &= timedPublish("load-0", feedLoad0, outputsGetLoad0() ? 1 : 0);
+    ok &= timedPublish("load-1", feedLoad1, outputsGetLoad1() ? 1 : 0);
+    ok &= timedPublish("protection", feedProtection, protectionCode());
+
+    Serial.printf("MQTT: publish batch took %lu ms\n", millis() - publishBatchStarted);
     Serial.println(ok ? F("MQTT: telemetry published.") : F("MQTT: one or more publishes failed."));
 }
