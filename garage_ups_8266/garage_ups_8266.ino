@@ -7,6 +7,7 @@
 #include "mqtt.h"
 #include "blynk_remote.h"
 #include "system_clock.h"
+#include "telegram.h"
 
 void setup() {
     debugBegin();
@@ -37,17 +38,17 @@ void setup() {
     systemClockBegin();
 
     // MQTT initializes after secrets and Wi-Fi setup; connection attempts are non-blocking in loop().
-    mqttBegin();
+    //mqttBegin();
 
     blynkRemoteBegin();
+
+    telegramBegin();
 }
 
 void loop() {
     systemClockUpdate();
     webHandleClient();
     blynkRemoteUpdate();
-
-
 
     static unsigned long lastSensorUpdate = 0;
     const unsigned long now = millis();
@@ -65,7 +66,11 @@ void loop() {
         lastDebugTime = debugNow;
         debugPrintSensors();
         debugPrintOutputs();
+
+        telegramUpdate();
     }
 
-    mqttUpdate();
+    //mqttUpdate();
+
+    
 }

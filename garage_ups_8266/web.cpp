@@ -10,6 +10,7 @@
 #include "protection.h"
 #include "web_page.h"
 #include "system_clock.h"
+#include "telegram.h"
 
 static ESP8266WebServer server(80);
 static bool serverStarted = false;
@@ -58,6 +59,20 @@ static void handleStatus() {
     json += "}";
 
     server.send(200, "application/json", json);
+}
+
+
+static void handleTelegramReport() {
+    if (!telegramIsConfigured()) {
+        server.send(503, "application/json", "{\"ok\":false,\"error\":\"telegram_not_configured\"}");
+        return;
+    }
+    if (!telegramRequestStatusReport("Вебінтерфейс")) {
+        server.send(503, "application/json", "{\"ok\":false,\"error\":\"queue_full\"}");
+        return;
+    }
+    // This confirms queueing only; delivery happens later in telegramUpdate().
+    server.send(202, "application/json", "{\"ok\":true,\"queued\":true}");
 }
 
 static void handleChargerToggle() {
@@ -121,6 +136,7 @@ bool webBegin() {
 
     server.on("/", HTTP_GET, handleRoot);
     server.on("/api/status", HTTP_GET, handleStatus);
+    server.on("/api/telegram/report", HTTP_POST, handleTelegramReport);
     server.on("/api/charger/toggle", HTTP_POST, handleChargerToggle);
     server.on("/api/load0/toggle", HTTP_POST, handleLoad0Toggle);
     server.on("/api/load1/toggle", HTTP_POST, handleLoad1Toggle);

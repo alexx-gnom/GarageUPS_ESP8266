@@ -49,6 +49,14 @@ button.small { padding: 7px 10px; font-size: 13px; }
         <div class="actual">Остання відповідь ESP: <span id="lastResponse">—</span></div>
     </div>
 
+    <div class="card" style="margin-bottom:12px">
+        <div class="output" style="margin-top:0">
+            <div class="outputInfo"><strong>Telegram</strong><span class="actual">Надіслати поточний стан UPS у бот</span></div>
+            <button id="telegramReportButton" class="small" onclick="requestTelegramReport()">Звіт у Telegram</button>
+        </div>
+        <div class="actual" id="telegramReportResult" style="margin-top:8px">Щоденний звіт заплановано на 08:00.</div>
+    </div>
+
     <div id="protectionCard" class="card alarm" style="margin-bottom:12px">
         <h2>Температурний захист</h2>
         <div id="faultTitle">Перевірка датчиків…</div>
@@ -205,6 +213,25 @@ async function postCommand(path, buttonId) {
 function toggleLoad(n) { return postCommand("/api/load" + n + "/toggle", "load" + n); }
 function restartLoad(n) { return postCommand("/api/load" + n + "/restart", "load" + n + "Restart"); }
 function toggleCharger() { return postCommand("/api/charger/toggle", "chargeButton"); }
+async function requestTelegramReport() {
+    const button = document.getElementById("telegramReportButton");
+    const result = document.getElementById("telegramReportResult");
+    button.disabled = true;
+    result.textContent = "Ставимо запит у чергу…";
+    try {
+        const response = await fetch("/api/telegram/report", { method: "POST" });
+        const data = await response.json();
+        if (!response.ok || !data.ok) {
+            if (data.error === "telegram_not_configured") throw new Error("Спочатку налаштуй токен бота й chat ID у secrets.cpp.");
+            throw new Error("Не вдалося поставити звіт у чергу.");
+        }
+        result.textContent = "Запит у черзі. Доставка в Telegram ще очікує підтвердження.";
+    } catch (error) {
+        result.textContent = error.message || "Помилка запиту Telegram.";
+    } finally {
+        button.disabled = false;
+    }
+}
 setInterval(updateStatus, 1000);
 setInterval(updateLastResponseLabel, 1000);
 updateStatus();
