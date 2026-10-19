@@ -167,24 +167,21 @@ void protectionUpdate() {
     updateRestartTimers();
 
     const float ntc = sensorsNtcTemperature();
-    const float ds18 = sensorsDs18b20Temperature();
-    const bool ntcOk = validTemperature(ntc);
-    const bool ds18Ok = validTemperature(ds18);
-    temperatureSensorsOk = ntcOk && ds18Ok;
+    const bool ntcOk = sensorsNtcMeasurementOk() && validTemperature(ntc);
+    // Temperature protection depends ONLY on the battery NTC.
+    temperatureSensorsOk = ntcOk;
 
-    // A valid sensor reaching the limit latches and persists the thermal fault.
-    if ((ntcOk && ntc >= BAT_OVERHEAT_TEMPERATURE) ||
-        (ds18Ok && ds18 >= BAT_OVERHEAT_TEMPERATURE)) {
+    // A valid NTC reaching the limit latches and persists the thermal fault.
+    if (ntcOk && ntc >= BAT_OVERHEAT_TEMPERATURE) {
         if (!overheatLatched) {
             overheatLatched = true; // Latch in RAM before attempting EEPROM write.
             saveOverheat(true);
         }
     }
 
-    // Physical FLASH button clears the latch only if both sensors are valid and cool.
+    // Physical FLASH button clears the latch only if NTC is valid and cool.
     if (buttonPressed() && overheatLatched && temperatureSensorsOk &&
-        ntc < BAT_OVERHEAT_TEMPERATURE &&
-        ds18 < BAT_OVERHEAT_TEMPERATURE && storageReady) {
+        ntc < BAT_OVERHEAT_TEMPERATURE && storageReady) {
         if (saveOverheat(false)) overheatLatched = false;
     }
 

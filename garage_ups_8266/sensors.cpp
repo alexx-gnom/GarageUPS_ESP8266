@@ -18,6 +18,11 @@ static OneWire oneWire(PIN_DS18B20);
 static DallasTemperature ds18(&oneWire);
 
 static bool adsReady = false;
+static unsigned long lastAdsInitAttempt = 0;
+static constexpr unsigned long ADS_RETRY_INTERVAL_MS = 5000;
+static bool ntcMeasurementValid = false;
+static unsigned long lastNtcMeasurementAt = 0;
+static constexpr unsigned long NTC_MAX_AGE_MS = 3000;
 static bool dsConversionPending = false;
 static unsigned long dsConversionStartedAt = 0;
 static constexpr unsigned long DS_CONVERSION_TIME_MS = 750;
@@ -116,19 +121,23 @@ bool sensorsBegin()
     Wire.begin(PIN_I2C_SDA, PIN_I2C_SCL);
 
     adsReady = ads.begin();
+    lastAdsInitAttempt = millis();
 
-    if (!adsReady)
-        return false;
+    if (adsReady) {
+        ads.setGain(GAIN_ONE);
+        Serial.println(F("ADS1115 initialized."));
+    } else {
+        Serial.println(F("ADS1115 unavailable; will retry every 5 seconds."));
+    }
 
-    ads.setGain(GAIN_ONE);
-
+    // DS18B20 is initialized independently; its failure must not affect ADS/NTC.
     ds18.begin();
     ds18.setWaitForConversion(false);
     ds18.requestTemperatures();
     dsConversionStartedAt = millis();
     dsConversionPending = true;
 
-    return true;
+    return adsReady;
 }
 
 // =====================================================
@@ -137,44 +146,44 @@ bool sensorsBegin()
 
 void sensorsUpdate()
 {
-    if (!adsReady)
-        return;
+    const unsigned long now = millis();
 
-    // NTC
-    ntcPinV = readAdcVoltage(ADC_NTC);
-    ntcResistance = calculateNtcResistance(ntcPinV);
-    ntcTemperature = calculateNtcTemperature(ntcResistance);
+    // Recover ADS1115 without rebooting the ESP. Keep retry attempts spaced apart.
+    if (!adsReady && now - lastAdsInitAttempt >= ADS_RETRY_INTERVAL_MS) {
+        lastAdsInitAttempt = now;
+        adsReady = ads.begin();
+        if (adsReady) {
+            ads.setGain(GAIN_ONE);
+            Serial.println(F("ADS1115 reinitialized successfully."));
+        } else {
+            Serial.println(F("ADS1115 retry failed; will try again."));
+        }
+    }
 
-    // Charger voltage
-    chargerPinV = readAdcVoltage(ADC_CHARGER);
-    chargerVoltage = dividerInputVoltage(
-        chargerPinV,
-        CHARGER_R_TOP,
-        CHARGER_R_BOTTOM);
+    // NTC is read first and independently of DS18B20 processing.
+    if (adsReady) {
+        ntcPinV = readAdcVoltage(ADC_NTC);
+        ntcResistance = calculateNtcResistance(ntcPinV);
+        ntcTemperature = calculateNtcTemperature(ntcResistance);
+        ntcMeasurementValid = isfinite(ntcTemperature) && ntcTemperature >= -40.0f && ntcTemperature <= 125.0f;
+        lastNtcMeasurementAt = millis();
 
-    // Battery voltage
-    batteryPinV = readAdcVoltage(ADC_BATTERY);
-    batteryVoltage = dividerInputVoltage(
-        batteryPinV,
-        BAT_R_TOP,
-        BAT_R_BOTTOM);
+        // Other ADC channels are non-temperature telemetry.
+        chargerPinV = readAdcVoltage(ADC_CHARGER);
+        chargerVoltage = dividerInputVoltage(chargerPinV, CHARGER_R_TOP, CHARGER_R_BOTTOM);
 
-    // ACS712
-    currentPinV = readAdcVoltage(ADC_CURRENT);
+        batteryPinV = readAdcVoltage(ADC_BATTERY);
+        batteryVoltage = dividerInputVoltage(batteryPinV, BAT_R_TOP, BAT_R_BOTTOM);
 
-    currentOutputV = dividerInputVoltage(
-        currentPinV,
-        ACS_R_TOP,
-        ACS_R_BOTTOM);
+        currentPinV = readAdcVoltage(ADC_CURRENT);
+        currentOutputV = dividerInputVoltage(currentPinV, ACS_R_TOP, ACS_R_BOTTOM);
+        currentAmps = (currentPinV - ACS_ZERO_PIN) / ACS_SENSITIVITY_PIN;
+        if (fabs(currentAmps) < 0.15f) currentAmps = 0.0f;
+    } else {
+        ntcMeasurementValid = false;
+    }
 
-    currentAmps =
-        (currentPinV - ACS_ZERO_PIN) /
-        ACS_SENSITIVITY_PIN;
-
-    if (fabs(currentAmps) < 0.15f)
-        currentAmps = 0.0f;
-
-    // DS18B20: asynchronous conversion so the web server is not blocked.
+    // DS18B20: asynchronous conversion; independent of ADS availability.
     if (dsConversionPending && millis() - dsConversionStartedAt >= DS_CONVERSION_TIME_MS) {
         const float temperature = ds18.getTempCByIndex(0);
         if (temperature != DEVICE_DISCONNECTED_C) {
@@ -228,6 +237,11 @@ float sensorsNtcResistance()
 float sensorsNtcTemperature()
 {
     return ntcTemperature;
+}
+
+bool sensorsNtcMeasurementOk()
+{
+    return ntcMeasurementValid && (millis() - lastNtcMeasurementAt <= NTC_MAX_AGE_MS);
 }
 
 float sensorsDs18b20Temperature()

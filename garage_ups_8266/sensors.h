@@ -33,5 +33,8 @@ float sensorsNtcResistance();
 // Розрахована температура NTC, °C.
 float sensorsNtcTemperature();
 
+// true only if NTC measurement is valid and fresh.
+bool sensorsNtcMeasurementOk();
+
 // Температура DS18B20, °C.
 float sensorsDs18b20Temperature();
