@@ -9,6 +9,7 @@
 #include "sensors.h"
 #include "outputs.h"
 #include "protection.h"
+#include "telegram.h"
 
 BLYNK_WRITE(V10) {
     if (param.asInt() == 1) {
@@ -42,6 +43,7 @@ BLYNK_WRITE(V14) {
      if (param.asInt() == 1) {
         Serial.println(F("Blynk: manual data refresh requested."));
         blinkSendData();
+        handleTelegramBlinkReport();
     }
 }
 
@@ -51,6 +53,15 @@ static constexpr unsigned long BLYNK_PUBLISH_INTERVAL_MS = 600000UL;
 static unsigned long lastReconnectAttempt = 0;
 static unsigned long lastPublish = 0;
 static bool blynkInitialized = false;
+
+void handleTelegramBlinkReport() {
+    if (!telegramIsConfigured()) {
+        return;
+    }
+    if (!telegramRequestStatusReport("Blink")) {
+        return;
+    }
+}
 
 static uint8_t protectionCode() {
     if (protectionIsOverheatLatched()) return 1;

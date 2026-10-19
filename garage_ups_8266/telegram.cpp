@@ -84,7 +84,7 @@ static String formatUptime() {
 static String buildStatusReport(const char* source) {
     String text;
     text.reserve(620);
-    text += F("🔋 Gn.O.M Garage UPS — звіт стану\n");
+    text += F("🔋 Gn.O.M Garage UPS — звіт\n");
     text += F("Запит: ");
     text += (source && *source) ? source : "ручний";
     text += '\n';
@@ -92,9 +92,9 @@ static String buildStatusReport(const char* source) {
     text += systemClockGetLocalTime();
     text += F(" (Europe/Kyiv)\n\n");
 
-    text += F("Зарядне джерело: ");
+    text += F("Блок живдення: ");
     text += formatFloat(sensorsChargerVoltage(), 2);
-    text += F(" V — ");
+    text += F(" V \nМережа:  ");
     text += protectionIsChargerPresent() ? F("є") : F("немає");
     text += '\n';
     text += F("Акумулятор: ");
@@ -113,8 +113,8 @@ static String buildStatusReport(const char* source) {
     text += F("Датчики температури: ");
     text += protectionTemperatureSensorsOk() ? F("OK") : F("ПОМИЛКА");
     text += '\n';
-    text += F("Низьковольтне відсічення: ");
-    text += protectionIsLowBatteryCutoff() ? F("АКТИВНЕ") : F("ні");
+    text += F("Низька напруга АКБ: ");
+    text += protectionIsLowBatteryCutoff() ? F("ТАК!") : F("ні");
     text += '\n';
     text += F("Зарядний вихід: ");
     text += outputsGetSafety() ? F("ON") : F("OFF");
@@ -240,7 +240,7 @@ static String withCurrentTime(const char* heading) {
     message += systemClockGetLocalTime();
     message += F(" (Europe/Kyiv)\nАкумулятор: ");
     message += formatFloat(sensorsBatteryVoltage(), 2);
-    message += F(" V\nЗарядне джерело: ");
+    message += F(" V\nБлок живлення: ");
     message += protectionIsChargerPresent() ? F("є") : F("немає");
     message += F(" (");
     message += formatFloat(sensorsChargerVoltage(), 2);
@@ -264,9 +264,9 @@ static void checkStateTransitions() {
         String startupWarnings;
         if (current.overheat || !current.temperatureSensorsOk || current.lowBattery) {
             startupWarnings = withCurrentTime("⚠️ UPS запустилась з активним захистом:");
-            if (current.overheat) startupWarnings += F("\n• Температурна аварія зафіксована.");
+            if (current.overheat) startupWarnings += F("\n• Температурна аварія.");
             if (!current.temperatureSensorsOk) startupWarnings += F("\n• Датчики температури несправні або ще не готові.");
-            if (current.lowBattery) startupWarnings += F("\n• Активне низьковольтне відсічення навантаження.");
+            if (current.lowBattery) startupWarnings += F("\n• Активний захист акумулятора по низькій напрузі.");
             queueAlert(startupWarnings);
         }
         return;
@@ -279,24 +279,24 @@ static void checkStateTransitions() {
     }
 
     if (!lastObservedState.lowBattery && current.lowBattery) {
-        String message = withCurrentTime("🚨 Низька напруга АКБ: відсічення навантаження!");
+        String message = withCurrentTime("🚨 Низька напруга АКБ: Виходи вимкнені.");
         message += F("\nLOAD 1: ");
         message += outputsGetLoad0() ? F("ON") : F("OFF");
         message += F("; LOAD 2: ");
         message += outputsGetLoad1() ? F("ON") : F("OFF");
         queueAlert(message);
     } else if (lastObservedState.lowBattery && !current.lowBattery) {
-        queueAlert(withCurrentTime("✅ Низьковольтне відсічення знято."));
+        queueAlert(withCurrentTime("✅ Захист акумулятора по низькій напрузі знято."));
     }
 
     if (!lastObservedState.overheat && current.overheat) {
-        queueAlert(withCurrentTime("🚨 ТЕМПЕРАТУРНА АВАРІЯ! Виходи мають бути вимкнені."));
+        queueAlert(withCurrentTime("🚨 ТЕМПЕРАТУРНА АВАРІЯ! Виходи вимкнені."));
     } else if (lastObservedState.overheat && !current.overheat) {
         queueAlert(withCurrentTime("✅ Температурну аварію скинуто."));
     }
 
     if (lastObservedState.temperatureSensorsOk && !current.temperatureSensorsOk) {
-        queueAlert(withCurrentTime("🚨 Помилка датчика температури! Захист блокує виходи."));
+        queueAlert(withCurrentTime("🚨 Помилка датчика температури! Виходи вимкнені."));
     } else if (!lastObservedState.temperatureSensorsOk && current.temperatureSensorsOk) {
         queueAlert(withCurrentTime("✅ Датчики температури знову працюють."));
     }
@@ -315,7 +315,7 @@ static void checkDailyReport() {
     const int year = localInfo.tm_year + 1900;
     if (lastDailyReportYear == year && lastDailyReportYday == localInfo.tm_yday) return;
 
-    if (telegramRequestStatusReport("Щоденний звіт о 08:00")) {
+    if (telegramRequestStatusReport("За розкладом")) {
         lastDailyReportYear = year;
         lastDailyReportYday = localInfo.tm_yday;
     }
