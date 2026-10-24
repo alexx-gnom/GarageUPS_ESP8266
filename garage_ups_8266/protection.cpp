@@ -108,8 +108,10 @@ static void applyOutputs() {
         return;
     }
 
-    // Charger output is enabled by default at boot, unless temporarily overridden.
-    outputsSetSafety(chargerRequest);
+    // The charger relay is useful only while the external charger source is present.
+    // Never spend battery energy on the relay coil when running from battery.
+    // Thermal/storage/sensor protections above always override this request.
+    outputsSetSafety(chargerPresent && chargerRequest);
 
     // On charger supply, honor the EEPROM preferences regardless of battery voltage.
     // On battery only, require a valid battery reading and no latched low-voltage cutoff.

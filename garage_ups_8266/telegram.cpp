@@ -28,6 +28,9 @@ static bool attemptedSend = false;
 static unsigned long lastSendAttempt = 0;
 static unsigned long nextSendDelay = TELEGRAM_SUCCESS_GAP_MS;
 static bool stateSnapshotReady = false;
+static bool startupReportPending = false;
+static unsigned long startupReportRequestedAt = 0;
+static constexpr unsigned long STARTUP_REPORT_DELAY_MS = 7000UL;
 
 struct ObservedState {
     bool sourcePresent;
@@ -48,6 +51,17 @@ bool telegramIsConfigured() {
 
 static bool enqueueMessage(const char* text) {
     if (!text || !*text) return false;
+
+    // Avoid queueing the same event/report more than once while connectivity
+    // is unavailable or while another subsystem retries the same request.
+    for (uint8_t i = 0; i < queueCount; ++i) {
+        const uint8_t index = static_cast<uint8_t>((queueHead + i) % TELEGRAM_QUEUE_CAPACITY);
+        if (strncmp(messageQueue[index], text, TELEGRAM_MESSAGE_SIZE) == 0) {
+            Serial.println(F("Telegram: duplicate message ignored."));
+            return true;
+        }
+    }
+
     if (queueCount >= TELEGRAM_QUEUE_CAPACITY) {
         Serial.println(F("Telegram: queue full; message not queued."));
         return false;
@@ -92,7 +106,7 @@ static String buildStatusReport(const char* source) {
     text += systemClockGetLocalTime();
     text += F(" (Europe/Kyiv)\n\n");
 
-    text += F("Блок живдення: ");
+    text += F("Блок живлення: ");
     text += formatFloat(sensorsChargerVoltage(), 2);
     text += F(" V \nМережа:  ");
     text += protectionIsChargerPresent() ? F("є") : F("немає");
@@ -323,13 +337,21 @@ static void checkDailyReport() {
 
 void telegramBegin() {
     if (telegramIsConfigured()) {
-        Serial.println(F("Telegram: initialized."));
+        Serial.println(F("Telegram: initialized; startup report delayed by 7 seconds."));
+        // Allow Wi-Fi/NTP and sensors to settle before taking the startup snapshot.
+        startupReportRequestedAt = millis();
+        startupReportPending = true;
     } else {
         Serial.println(F("Telegram: not configured; status messages are disabled until secrets.cpp is updated."));
     }
 }
 
 void telegramUpdate() {
+    if (startupReportPending && millis() - startupReportRequestedAt >= STARTUP_REPORT_DELAY_MS) {
+        startupReportPending = false;
+        telegramRequestStatusReport("Запуск ДБЖ");
+    }
+
     checkStateTransitions();
     checkDailyReport();
 

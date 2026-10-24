@@ -6,38 +6,66 @@ const char MAIN_PAGE[] PROGMEM = R"rawliteral(
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Garage UPS</title>
+<title>Gn.O.M · Garage UPS</title>
 <style>
-* { box-sizing: border-box; }
-body { margin: 0; padding: 20px; background: #111820; color: #e8edf2; font-family: Arial, sans-serif; }
-main { max-width: 760px; margin: auto; }
-h1 { margin-bottom: 6px; }
-.subtitle { color: #9baaba; margin-bottom: 22px; }
-.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
-.card { background: #202b37; border: 1px solid #344252; border-radius: 12px; padding: 16px; }
-.label { color: #aab7c5; font-size: 14px; }
-.value { margin-top: 8px; font-size: 27px; font-weight: bold; }
-.unit { color: #aab7c5; font-size: 14px; }
-button { border: 0; border-radius: 8px; padding: 11px 14px; color: white; background: #465466; font-size: 15px; cursor: pointer; }
-button.on { background: #16834a; }
-button.off { background: #465466; }
-button:disabled { opacity: 0.5; cursor: wait; }
-button.small { padding: 7px 10px; font-size: 13px; }
-.output { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
-.outputInfo { display: flex; flex-direction: column; gap: 5px; }
-.actual { color: #aab7c5; font-size: 12px; }
-.actions { display: flex; gap: 8px; align-items: center; }
-.alarm { border: 1px solid #a93226; background: #481c20; }
-.alarm.normal { border-color: #236b45; background: #183b2b; }
-.alarm h2 { margin-top: 0; }
-#faultTitle { font-weight: bold; font-size: 18px; }
-.status { color: #9baaba; font-size: 13px; margin-top: 18px; }
-@media (max-width: 420px) { body { padding: 12px; } .value { font-size: 24px; } }
+:root {
+  color-scheme: dark;
+  --bg:#11100e; --panel:#24201b; --panel2:#30271e;
+  --brass:#bd9250; --copper:#b96e43; --gold:#f0c77c;
+  --text:#f2e7d2; --muted:#b9a78d; --green:#80d39b; --red:#ff8b72;
+}
+* { box-sizing:border-box; }
+body {
+  margin:0; padding:22px; color:var(--text); font-family:Georgia,"Trebuchet MS",sans-serif;
+  background:
+    radial-gradient(ellipse at 18% 0%, rgba(164,112,52,.18), transparent 42%),
+    radial-gradient(ellipse at 90% 30%, rgba(120,65,35,.15), transparent 38%),
+    repeating-linear-gradient(135deg,#171512 0,#171512 3px,#191713 3px,#191713 6px);
+}
+main { max-width:850px; margin:auto; }
+h1 { margin:0 0 5px; color:var(--gold); letter-spacing:.5px; font-size:clamp(25px,5vw,35px); text-shadow:0 2px 0 #4a2d16,0 0 18px #a56c2940; }
+h2 { color:var(--gold); font-size:20px; margin:0 0 14px; }
+.subtitle { color:var(--muted); margin-bottom:22px; letter-spacing:1.2px; text-transform:uppercase; font-size:12px; }
+.grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:12px; }
+.card {
+  position:relative; overflow:hidden; background:linear-gradient(145deg,rgba(57,46,34,.98),rgba(30,27,23,.98));
+  border:1px solid #765832; border-radius:10px; padding:16px;
+  box-shadow:inset 0 1px 0 #ffffff0d,inset 0 0 0 3px #00000024,0 5px 14px #00000035;
+}
+.card:before { content:""; position:absolute; left:7px; right:7px; top:5px; height:1px; background:linear-gradient(90deg,transparent,#cba66a80,transparent); pointer-events:none; }
+.label { color:#c4ad8b; font-size:13px; text-transform:uppercase; letter-spacing:.6px; }
+.value { margin-top:8px; font-size:29px; font-weight:bold; color:#f4d9a4; text-shadow:0 0 12px #c4873b25; }
+.unit { color:#b9a78d; font-size:14px; }
+button {
+  border:1px solid #a87c43; border-radius:6px; padding:11px 14px; color:#fff0d2;
+  background:linear-gradient(#72502e,#49311e); box-shadow:inset 0 1px 0 #ffffff26,0 2px 4px #0008;
+  font: bold 14px Georgia,serif; cursor:pointer; transition:filter .15s,transform .15s;
+}
+button:hover { filter:brightness(1.2); } button:active { transform:translateY(1px); }
+button.on { background:linear-gradient(#31784a,#19482d); border-color:#72b985; color:#e2ffe9; }
+button.off { background:linear-gradient(#66503a,#392b20); }
+button:disabled { opacity:.48; cursor:wait; }
+button.small { padding:7px 10px; font-size:12px; }
+.output { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-top:14px; flex-wrap:wrap; }
+.outputInfo { display:flex; flex-direction:column; gap:5px; }
+.actual { color:#b9a78d; font-size:12px; line-height:1.45; }
+.actions { display:flex; gap:8px; align-items:center; }
+.alarm { border-color:#a54835; background:linear-gradient(145deg,#4b211b,#2a1b18); }
+.alarm.normal { border-color:#497a4f; background:linear-gradient(145deg,#253c2b,#1d2920); }
+#faultTitle { font-weight:bold; font-size:18px; }
+.status { color:#b9a78d; font-size:12px; margin-top:18px; text-align:center; letter-spacing:.3px; }
+#clockTime { color:#f5ce87; font-family:"Courier New",monospace; letter-spacing:1px; }
+#connection { color:var(--green); font-weight:bold; }
+#protectionCard { margin-bottom:12px; }
+@media (max-width:420px) {
+  body { padding:12px; } .value { font-size:24px; } .card { padding:13px; }
+  .actions { width:100%; justify-content:flex-start; } h2 { font-size:18px; }
+}
 </style>
 </head>
 <body>
 <main>
-    <h1>🔋 Gn.O.M Garage UPS</h1>
+    <h1>⚙️ Gn.O.M Garage UPS</h1>
     <div class="subtitle">ESP8266 · локальний моніторинг</div>
 
     <div class="card" style="margin-bottom:12px">
@@ -169,7 +197,15 @@ async function updateStatus() {
         document.getElementById("load1Restart").textContent = data.load1Restarting ? "Очікування…" : "Перезапуск · 7 с";
 
         setButton("chargeButton", data.chargeRequest, "Зарядка: ON", "Зарядка: OFF");
-        document.getElementById("chargeActual").textContent = "Фактично: " + (data.chargeRelay ? "ON" : "OFF");
+        let chargeState = data.chargeRelay ? "ON" : "OFF";
+        if (!data.chargerPresent && !data.overheat && data.temperatureOk) {
+            chargeState += " · немає зовнішнього живлення";
+        } else if (data.overheat || !data.temperatureOk) {
+            chargeState += " · заблоковано захистом";
+        } else if (!data.chargeRequest) {
+            chargeState += " · вимкнено вручну";
+        }
+        document.getElementById("chargeActual").textContent = "Фактично: " + chargeState;
 
         const card = document.getElementById("protectionCard");
         const title = document.getElementById("faultTitle");
